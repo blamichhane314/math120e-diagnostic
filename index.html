@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang=en>
+<meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1">
+<title>MATH 120E — first day</title>
+<style>
+:root{
+  --paper:#f4f0e6; --paper-lift:#f8f5ee; --deep:#e7e1d3;
+  --ink:#26221d; --ink-soft:#7a7264; --ink-faint:#a89f8e;
+  --line:rgba(38,34,29,.12); --line-soft:rgba(38,34,29,.07);
+  --accent:#a8432e; --accent-soft:#c98a5e; --accent-tint:rgba(168,67,46,.08);
+  --sans:"Space Grotesk",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --mono:"Space Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --s:8px; --ease:cubic-bezier(.2,.72,.18,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font:16px/1.62 var(--sans);
+  -webkit-font-smoothing:antialiased;padding:calc(var(--s)*5) calc(var(--s)*3) calc(var(--s)*14)}
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:radial-gradient(120% 90% at 50% 0%,#f7f3ea 0%,var(--paper) 42%,var(--deep) 100%)}
+main{max-width:38rem;margin:0 auto}
+h1{font-size:27px;font-weight:500;letter-spacing:-.018em;line-height:1.24}
+.eyebrow{font:9px/1.6 var(--mono);letter-spacing:.2em;color:var(--ink-faint);
+  margin-bottom:calc(var(--s))}
+.lede{color:var(--ink-soft);margin:calc(var(--s)*1.5) 0 calc(var(--s)*4);max-width:34rem}
+
+.who{border-left:1px solid var(--accent-soft);padding-left:calc(var(--s)*1.75);
+  margin-bottom:calc(var(--s)*4)}
+.who label{display:block;font:9px/1.7 var(--mono);letter-spacing:.16em;
+  color:var(--ink-faint);margin-bottom:5px}
+.who input{font:15px var(--mono);color:var(--ink);background:var(--paper-lift);
+  border:0;border-bottom:1px solid var(--ink-soft);padding:4px 8px;width:11rem}
+.who input:focus{outline:0;border-bottom-color:var(--accent)}
+.who p{font-size:12.5px;color:var(--ink-faint);margin-top:calc(var(--s))}
+
+.q{padding:calc(var(--s)*3) 0;border-top:1px solid var(--line-soft)}
+.q-n{font:9px/1.7 var(--mono);letter-spacing:.16em;color:var(--ink-faint)}
+.q-t{font-size:16.5px;line-height:1.5;margin:calc(var(--s)*.75) 0 calc(var(--s)*1.75)}
+.q-t code{font:17px var(--mono);background:var(--paper-lift);padding:1px 5px;
+  border-radius:2px;letter-spacing:.01em}
+sup{font-size:.72em;vertical-align:super;line-height:0}
+.opt{display:flex;gap:calc(var(--s)*1.25);align-items:baseline;padding:6px 9px;
+  border:1px solid transparent;border-radius:2px;cursor:pointer;
+  transition:background .14s var(--ease),border-color .14s var(--ease)}
+.opt:hover{background:var(--paper-lift)}
+.opt:has(input:checked){border-color:var(--accent);background:var(--accent-tint)}
+.opt input{accent-color:var(--accent);margin-top:5px}
+.opt .k{font:10px/1.7 var(--mono);color:var(--ink-faint);min-width:13px}
+.opt .v{flex:1;font-size:15px}
+.opt .v code{font:15px var(--mono)}
+
+.foot{margin-top:calc(var(--s)*5);padding-top:calc(var(--s)*2.5);
+  border-top:1px solid var(--line)}
+button.go{font:11px var(--mono);letter-spacing:.16em;background:none;
+  border:1px solid var(--ink-soft);color:var(--ink);padding:11px 20px;
+  border-radius:2px;cursor:pointer;transition:color .14s var(--ease),border-color .14s var(--ease)}
+button.go:hover:not(:disabled){color:var(--accent);border-color:var(--accent)}
+button.go:disabled{opacity:.45;cursor:default}
+.count{font:10.5px var(--mono);color:var(--ink-faint);margin-left:calc(var(--s)*2)}
+.done{margin-top:calc(var(--s)*2.5);padding-left:calc(var(--s)*1.75);
+  border-left:1px solid var(--accent-soft);font-size:14px;color:var(--ink-soft)}
+.done b{color:var(--ink);font-weight:500}
+.done a{color:var(--accent)}
+</style>
+
+<main>
+  <div class=eyebrow>math 120e &middot; fall 2026</div>
+  <h1>Where we&rsquo;re starting from</h1>
+  <p class=lede>Eight questions, about five minutes. This is not graded and it does
+  not count for anything. It tells me what to spend time on in the first two weeks,
+  so answer as you actually would &mdash; a guess you would really make is more
+  useful to me than a blank.</p>
+
+  <div class=who>
+    <label for=sid>your code (from the card)</label>
+    <input id=sid maxlength=12 autocomplete=off spellcheck=false placeholder="M00">
+    <p>Optional. Leave it blank to stay anonymous &mdash; your answers are still counted.</p>
+  </div>
+
+  <form id=quiz></form>
+
+  <div class=foot>
+    <button class=go id=send disabled>submit</button>
+    <span class=count id=count></span>
+    <div class=done id=done hidden></div>
+  </div>
+</main>
+
+<script>
+// ── where responses go ───────────────────────────────────────────────
+// Leave ENDPOINT empty and the page works with no backend at all: answers stay
+// in the browser and the student downloads a small file. Set it to a Worker URL
+// to collect centrally. See README.md.
+const ENDPOINT = '';
+const CLASS_CODE = 'MATH120E-F26';
+
+// ── the questions ────────────────────────────────────────────────────
+// Written for this diagnostic. Each targets one objective of section 1.1, and
+// each wrong answer is a documented error rather than a random decoy, so the
+// result reads as a profile of what to teach rather than as a score.
+const Q = [
+  { obj: '1.1/O3', tag: 'order of operations · sticky sign',
+    t: 'What is <code>&minus;9<sup>2</sup></code>?',
+    o: ['81', '&minus;81', '&minus;18', 'undefined'],
+    key: 1,
+    diag: { 0: 'sticky-sign: reads the minus as part of the base' } },
+
+  { obj: '1.1/O3', tag: 'order of operations · precedence',
+    t: 'What is <code>10 &minus; 2 &times; 4</code>?',
+    o: ['32', '2', '&minus;2', '18'],
+    key: 1,
+    diag: { 0: 'left-to-right: subtracts before multiplying' } },
+
+  { obj: '1.1/O3', tag: 'order of operations · grouping bar',
+    t: 'What is <code>(6 + 4) &divide; 2</code>?',
+    o: ['5', '8', '7', '3'],
+    key: 0,
+    diag: { 1: 'divides only the last term instead of the whole group' } },
+
+  { obj: '1.1/O2', tag: 'evaluate · substituting a negative',
+    t: 'If <code>x = &minus;3</code>, what is <code>x<sup>2</sup> &minus; 2x</code>?',
+    o: ['3', '15', '&minus;3', '&minus;15'],
+    key: 1,
+    diag: { 0: 'squares the value but drops the sign on the second term',
+            2: 'treats x² as negative' } },
+
+  { obj: '1.1/O1', tag: 'name the property',
+    t: 'Which property does <code>3 + (5 + 2) = (3 + 5) + 2</code> show?',
+    o: ['commutative', 'associative', 'distributive', 'identity'],
+    key: 1,
+    diag: { 0: 'confuses regrouping with reordering' } },
+
+  { obj: '1.1/O1', tag: 'name the property',
+    t: 'Which property does <code>4(x + 7) = 4x + 28</code> show?',
+    o: ['associative', 'commutative', 'distributive', 'inverse'],
+    key: 2, diag: {} },
+
+  { obj: '1.1/O4', tag: 'compare reals',
+    t: 'Which is larger, <code>3/8</code> or <code>0.4</code>?',
+    o: ['3/8', '0.4', 'they are equal', 'cannot tell'],
+    key: 1,
+    diag: { 0: 'compares the numerator to the decimal digits' } },
+
+  { obj: '1.1/O5', tag: 'interval notation',
+    t: 'Which interval means <code>x &gt; 2</code>?',
+    o: ['[2, &infin;)', '(2, &infin;)', '(&minus;&infin;, 2)', '(2, &infin;]'],
+    key: 1,
+    diag: { 0: 'includes an endpoint the strict inequality excludes',
+            3: 'closes a bracket on infinity' } },
+];
+
+// ── render ───────────────────────────────────────────────────────────
+const session = 's' + Math.random().toString(36).slice(2, 10);
+const t0 = Date.now();
+const form = document.getElementById('quiz');
+const picked = new Array(Q.length).fill(null);
+
+Q.forEach((q, i) => {
+  const d = document.createElement('div');
+  d.className = 'q';
+  d.innerHTML =
+    '<div class=q-n>' + String(i + 1).padStart(2, '0') + '</div>' +
+    '<div class=q-t>' + q.t + '</div>' +
+    q.o.map((o, j) =>
+      '<label class=opt><input type=radio name=q' + i + ' value=' + j + '>' +
+      '<span class=k>' + 'ABCD'[j] + '</span><span class=v>' + o + '</span></label>'
+    ).join('');
+  form.appendChild(d);
+});
+
+form.addEventListener('change', (e) => {
+  const m = /^q(\d+)$/.exec(e.target.name || '');
+  if (!m) return;
+  picked[+m[1]] = +e.target.value;
+  const n = picked.filter((x) => x !== null).length;
+  document.getElementById('count').textContent = n + ' of ' + Q.length + ' answered';
+  document.getElementById('send').disabled = n === 0;
+});
+
+// ── submit ───────────────────────────────────────────────────────────
+document.getElementById('send').onclick = async () => {
+  const btn = document.getElementById('send');
+  btn.disabled = true; btn.textContent = 'sending';
+
+  const payload = {
+    code: CLASS_CODE,
+    session,
+    student: document.getElementById('sid').value.trim().slice(0, 12),
+    ms: Date.now() - t0,
+    answers: Q.map((q, i) => ({
+      obj: q.obj, tag: q.tag,
+      picked: picked[i],
+      correct: picked[i] === q.key,
+      // the name of the error, where the chosen answer has one
+      error: (picked[i] !== null && q.diag[picked[i]]) || null,
+    })),
+  };
+
+  const right = payload.answers.filter((a) => a.correct).length;
+  const done = document.getElementById('done');
+
+  if (!ENDPOINT) {
+    const blob = new Blob([JSON.stringify(payload, null, 1)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    done.innerHTML = '<b>Done &mdash; ' + right + ' of ' + Q.length + '.</b> ' +
+      'No collection is set up for this page yet, so your answers stayed on this device. ' +
+      '<a id=dl href="' + url + '" download="diagnostic-' + session + '.json">Download them</a> ' +
+      'and hand the file in.';
+    done.hidden = false;
+    btn.textContent = 'saved locally';
+    return;
+  }
+
+  try {
+    const r = await fetch(ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || 'refused');
+    done.innerHTML = '<b>Thank you &mdash; that is recorded.</b> ' + right + ' of ' +
+      Q.length + ' correct, which is not a grade and is not kept against your name. ' +
+      'See you in class.';
+    btn.textContent = 'sent';
+  } catch (err) {
+    // never lose a student's work to a bad network
+    try { localStorage.setItem('m120.diag.' + session, JSON.stringify(payload)); } catch {}
+    done.innerHTML = '<b>That did not send.</b> Your answers were saved on this device ' +
+      'instead &mdash; please tell me, and leave this tab open. (' + err.message + ')';
+    btn.textContent = 'retry';
+    btn.disabled = false;
+  }
+  done.hidden = false;
+};
+</script>
+</html>
