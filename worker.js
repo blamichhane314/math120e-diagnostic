@@ -1,12 +1,11 @@
-// src/index.js — the whole server.
+// worker.js — the data endpoint. Paste this into the Cloudflare Worker and
+// deploy; the pages themselves are served by GitHub Pages.
 //
-// Static files come from public/ and are matched first by the assets layer.
-// Only paths that are not files reach this code, so /api/responses lands here
-// while /index.html never does.
-//
-// Same origin as the page, so there is no CORS anywhere: no preflight, no
-// allow-headers, and no second deployment that could drift out of step with
-// the page that calls it.
+// The page is on github.io and this is on workers.dev, so the browser treats
+// every submission as cross-origin: it sends an OPTIONS preflight first and
+// will discard the response unless the headers below come back. That is the
+// cost of hosting the two halves separately, and it is why the CORS block
+// exists at all.
 //
 // Two guards doing two different jobs:
 //   CLASS_CODE — sent by the page, therefore public by construction. It keeps
@@ -15,19 +14,24 @@
 //     and never in the page. It is the only thing between a passer-by and the
 //     whole dataset.
 
-const CLASS_CODE = 'MATH120E-F26';   // change per term; must match public/index.html
+const CLASS_CODE = 'MATH120E-F26';   // change per term; must match index.html
+
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+};
 
 const json = (o, status = 200) =>
   new Response(JSON.stringify(o), {
     status,
-    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+    headers: { ...CORS, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
   });
 
 export default {
   async fetch(request, env) {
+    if (request.method === 'OPTIONS') return new Response(null, { headers: CORS });
     const url = new URL(request.url);
-    if (url.pathname !== '/api/responses') return env.ASSETS.fetch(request);
-
     if (request.method === 'POST')   return submit(request, env);
     if (request.method === 'GET')    return read(url, env);
     if (request.method === 'DELETE') return purge(url, env);
@@ -76,6 +80,7 @@ async function read(url, env) {
   if (url.searchParams.get('format') === 'jsonl') {
     return new Response(rows.map((r) => JSON.stringify(r)).join('\n'), {
       headers: {
+        ...CORS,
         'Content-Type': 'application/x-ndjson',
         'Content-Disposition': 'attachment; filename="responses.jsonl"',
       },

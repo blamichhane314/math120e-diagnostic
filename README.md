@@ -12,39 +12,36 @@ if you would rather collect files than run a service.
 
 ## How it deploys
 
-The repository is private and Cloudflare builds it as a **Worker with static
-assets** — not as a classic Pages project. That distinction matters: the
-`functions/` directory convention belongs to Pages, and on this platform it did
-nothing at all except serve its own source as a downloadable file.
+Two halves, hosted separately:
 
-    public/     the pages, served by the assets layer
-    src/        the Worker, reached only by paths that are not files
-    wrangler.jsonc
+- **GitHub Pages** serves `index.html`, `live.html` and `questions.js` from the
+  repository root.
+- **A Cloudflare Worker** takes the data. Paste `worker.js` into it and deploy.
 
-Assets are matched first, so `/api/responses` falls through to `src/index.js`
-while `/index.html` never does. The page and the endpoint share an origin, so
-there is no CORS and one push updates both.
+Because the page is on `github.io` and the endpoint on `workers.dev`, the
+browser treats every submission as cross-origin and sends a preflight first.
+`worker.js` answers it; that is the only reason the CORS block is there.
 
-Two bindings on the project, both required:
+The Worker needs two things, both on the Worker itself:
 
-- **KV namespace**, variable name `RESPONSES`
+- a **KV namespace** bound with the variable name `RESPONSES`
 - **ADMIN_KEY**, an encrypted variable, any long string
 
-Bindings only attach on the next build, so redeploy after adding them. If either
-is missing the endpoint returns a 500 naming the one that is absent rather than
-failing silently.
+Both attach only on the next deploy, so deploy again after adding them. If
+either is missing the endpoint returns a 500 naming the one that is absent.
 
-Change `CLASS_CODE` in both `public/index.html` and `src/index.js` each term.
+Change `CLASS_CODE` in both `index.html` and `worker.js` each term. It is sent
+by the page and so is public by construction; it exists to keep stray writes out.
 
 ## Restricting who can open it
 
-Cloudflare Access, on the free Zero Trust plan, gates the site by email for a
-small number of users — roughly the size of one class. Add a policy over the
-Pages project and only addresses on your list get in.
+The repository is public so that GitHub Pages can serve it for free, which
+means the page is public too. That is fine for this: the questions are written
+for the diagnostic and no publisher material is involved.
 
-Apply it to the **site**, never to `/api/responses`. A student's browser posts
-there with no session, so a login wall on that path would redirect every
-submission to a sign-in screen and fail.
+Do not put Cloudflare Access in front of the Worker. A student's browser posts
+there with no session, so a login wall would redirect every submission to a
+sign-in screen and fail.
 
 ## On identity
 
