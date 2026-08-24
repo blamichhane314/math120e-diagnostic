@@ -1,22 +1,23 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "math120e-diagnostic-api",
-  "main": "src/index.js",
-  "compatibility_date": "2026-08-01",
-
-  // No "assets" block, deliberately. This Worker is an API and nothing else.
-  //
-  // A Worker that also serves static assets hands GET requests to the asset
-  // handler before the script runs, and answers anything the assets do not
-  // cover with a bare 404 or 405. Reads come back as a web page, writes are
-  // refused, and the script itself never executes — which looks exactly like
-  // a binding that will not attach. The pages are on GitHub Pages; nothing
-  // static belongs here.
-
-  "kv_namespaces": [
-    { "binding": "RESPONSES", "id": "PUT-YOUR-KV-NAMESPACE-ID-HERE" }
-  ]
-
-  // ADMIN_KEY is a secret, not a var. Set it with:
-  //   npx wrangler secret put ADMIN_KEY
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "math120e-diagnostic-api",
+	"main": "src/index.js",
+	"compatibility_date": "2026-08-01",
+	// No "assets" block, deliberately. This Worker is an API and nothing else.
+	//
+	// A Worker that also serves static assets hands GET requests to the asset
+	// handler before the script runs, and answers anything the assets do not
+	// cover with a bare 404 or 405. Reads come back as a web page, writes are
+	// refused, and the script itself never executes — which looks exactly like
+	// a binding that will not attach. The pages are on GitHub Pages; nothing
+	// static belongs here.
+	"kv_namespaces": [
+		{
+			"binding": "RESPONSES",
+			"id": "0adbe595bcd04b30941cd20e346e19e9",
+			"remote": true
+		}
+	]
+	// ADMIN_KEY is a secret, not a var. Set it with:
+	//   npx wrangler secret put ADMIN_KEY
 }

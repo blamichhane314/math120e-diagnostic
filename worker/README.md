@@ -8,8 +8,15 @@ key. It serves no pages — those are on GitHub Pages.
     cd worker
     npx wrangler kv namespace create RESPONSES     # once; copy the id
     # paste that id into wrangler.jsonc
+    npx wrangler deploy                            # creates the Worker
     npx wrangler secret put ADMIN_KEY              # once; any long string
-    npx wrangler deploy
+
+Deploy before setting the secret: `secret put` addresses a Worker that already
+exists and fails with "Worker not found" otherwise. The secret takes effect at
+once; it does not need a second deploy.
+
+Only reads and purges use ADMIN_KEY. Submissions are stored without it, so the
+activity works the moment the Worker is deployed.
 
 ## Check it before class
 
