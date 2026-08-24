@@ -149,6 +149,37 @@ const Q = [
             3: 'closes a bracket on infinity' } },
 ];
 
+// ── local store ──────────────────────────────────────────────────────
+// Every submission is written here first, whether or not it is also sent, so a
+// dropped network or an unclicked link never costs a student their work.
+const KEY = 'm120.diag.';
+function keep(payload) {
+  try { localStorage.setItem(KEY + payload.session, JSON.stringify(payload)); } catch {}
+}
+function stored() {
+  const out = [];
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(KEY)) out.push(JSON.parse(localStorage.getItem(k)));
+    }
+  } catch {}
+  return out.sort((a, b) => (a.at || '').localeCompare(b.at || ''));
+}
+// Recovery, for pulling responses off a device that could not send:
+//   open this page with #recover
+if (location.hash === '#recover') {
+  addEventListener('DOMContentLoaded', () => {
+    const rows = stored();
+    const blob = new Blob([rows.map((r) => JSON.stringify(r)).join('\n')],
+                          { type: 'application/x-ndjson' });
+    document.body.innerHTML =
+      '<main><h1>' + rows.length + ' response' + (rows.length === 1 ? '' : 's') +
+      ' on this device</h1><p class=lede><a href="' + URL.createObjectURL(blob) +
+      '" download="diagnostic-recovered.jsonl">Download them all</a></p></main>';
+  });
+}
+
 // ── render ───────────────────────────────────────────────────────────
 const session = 's' + Math.random().toString(36).slice(2, 10);
 const t0 = Date.now();
@@ -186,6 +217,7 @@ document.getElementById('send').onclick = async () => {
     code: CLASS_CODE,
     session,
     student: document.getElementById('sid').value.trim().slice(0, 12),
+    at: new Date().toISOString(),
     ms: Date.now() - t0,
     answers: Q.map((q, i) => ({
       obj: q.obj, tag: q.tag,
@@ -199,15 +231,20 @@ document.getElementById('send').onclick = async () => {
   const right = payload.answers.filter((a) => a.correct).length;
   const done = document.getElementById('done');
 
+  // Persist BEFORE anything else. A submission that survives only as a link the
+  // student has to click is a submission that gets lost, and it gets lost
+  // silently, which is worse than failing loudly.
+  keep(payload);
+
   if (!ENDPOINT) {
     const blob = new Blob([JSON.stringify(payload, null, 1)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     done.innerHTML = '<b>Done &mdash; ' + right + ' of ' + Q.length + '.</b> ' +
-      'No collection is set up for this page yet, so your answers stayed on this device. ' +
-      '<a id=dl href="' + url + '" download="diagnostic-' + session + '.json">Download them</a> ' +
-      'and hand the file in.';
+      'Your answers are saved on this device. ' +
+      '<a id=dl href="' + url + '" download="diagnostic-' + session + '.json">Download the file</a> ' +
+      'and hand it in.';
     done.hidden = false;
-    btn.textContent = 'saved locally';
+    btn.textContent = 'saved on this device';
     return;
   }
 
@@ -224,8 +261,6 @@ document.getElementById('send').onclick = async () => {
       'See you in class.';
     btn.textContent = 'sent';
   } catch (err) {
-    // never lose a student's work to a bad network
-    try { localStorage.setItem('m120.diag.' + session, JSON.stringify(payload)); } catch {}
     done.innerHTML = '<b>That did not send.</b> Your answers were saved on this device ' +
       'instead &mdash; please tell me, and leave this tab open. (' + err.message + ')';
     btn.textContent = 'retry';
