@@ -1,1 +1,4 @@
-.DS_Store
+responses.jsonl
+*.jsonl
+.wrangler/
+node_modules/

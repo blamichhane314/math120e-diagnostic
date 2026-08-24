@@ -66,12 +66,13 @@ here.
 ## Getting the responses out
 
 There is no live view and nothing polls. Responses sit in Cloudflare KV until
-you fetch them, in one request, when the activity is over:
+you fetch them, when the activity is over:
 
-    W=https://YOUR-WORKER.workers.dev
-    curl --get "$W" --data-urlencode "key=YOUR-ADMIN-KEY" -d format=jsonl -o responses.jsonl
+    ./pull.sh              # -> responses.jsonl
+    ./pull.sh --purge      # download, then delete exactly what was downloaded
 
-Then read them offline:
+That reads KV through wrangler, which is already signed in, so it needs no key
+and no endpoint. Then read the file offline:
 
     node report.mjs responses.jsonl
 
@@ -83,11 +84,12 @@ actually reteach from.
 
 Answers carry their own tag, so a file that mixes question sets still lines up.
 
-Once you have the file and have checked it opens, purge:
+Responses live in KV, not in this repository. `responses.jsonl` is gitignored.
 
-    curl -X DELETE --get "$W" --data-urlencode "key=YOUR-ADMIN-KEY"
-
-Responses live in KV, not in this repository. Git only ever holds the code.
+There is also an HTTP route for the same thing, gated by `ADMIN_KEY`; see
+`worker/README.md`. You do not need it — `pull.sh` covers the whole job — and
+until a secret is set, `GET` on the endpoint answers `ADMIN_KEY is not set`.
+Submissions never touch it.
 
 ## What the questions are for
 
