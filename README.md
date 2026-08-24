@@ -46,11 +46,44 @@ to the route the page writes to.
 
 ## On identity
 
-By default a student is a random session id and nothing else. There is an
-optional field for a code you hand out on paper — `M07`, `M13` — so you can
-match a response to a person without the dataset containing anyone's name. If
-you would rather have names, change the label; the field is free text either
-way. Nothing here asks for an email or an account.
+There is none. No sign-in, no name field, no code — a response carries a random
+session id and nothing else, and the page says so where students can read it.
+That is a deliberate choice: these assignments are for engagement and for
+telling you what to teach, not for grading, so there is nothing to gain by
+holding records about identifiable students.
+
+If a future activity does need attribution, put it in WebCampus rather than
+here. Identity belongs where the records obligations already live.
+
+## Watching it live
+
+Open `live.html` on the projector with your Worker URL and admin key in the
+query string:
+
+    live.html?endpoint=https://YOUR-WORKER.workers.dev&key=YOUR-ADMIN-KEY
+
+It polls every five seconds and draws, per question, how the class answered —
+the correct option in ink, options that correspond to a known error in the
+accent colour, and a line naming the error when enough of the room picks it.
+
+Both values stay in that tab's address bar. Nothing in the students' page ever
+sees the admin key.
+
+The arithmetic works because reads and writes are not equally scarce. Each
+student writes exactly once; the projector only reads, and reads are the
+abundant resource on the free tier. Polling all period costs a fraction of the
+daily read allowance, while forty writes is four percent of the daily write
+allowance.
+
+## Afterwards
+
+Keep a copy, then purge:
+
+    curl "https://YOUR-WORKER.workers.dev/?key=KEY&format=jsonl" -o responses.jsonl
+    curl -X DELETE "https://YOUR-WORKER.workers.dev/?key=KEY"
+
+Responses live in Cloudflare KV, never in this repository — git only ever holds
+the code, so there is no risk of committing a class's answers by accident.
 
 ## What the questions are for
 

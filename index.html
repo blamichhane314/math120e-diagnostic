@@ -24,15 +24,6 @@ h1{font-size:27px;font-weight:500;letter-spacing:-.018em;line-height:1.24}
   margin-bottom:calc(var(--s))}
 .lede{color:var(--ink-soft);margin:calc(var(--s)*1.5) 0 calc(var(--s)*4);max-width:34rem}
 
-.who{border-left:1px solid var(--accent-soft);padding-left:calc(var(--s)*1.75);
-  margin-bottom:calc(var(--s)*4)}
-.who label{display:block;font:9px/1.7 var(--mono);letter-spacing:.16em;
-  color:var(--ink-faint);margin-bottom:5px}
-.who input{font:15px var(--mono);color:var(--ink);background:var(--paper-lift);
-  border:0;border-bottom:1px solid var(--ink-soft);padding:4px 8px;width:11rem}
-.who input:focus{outline:0;border-bottom-color:var(--accent)}
-.who p{font-size:12.5px;color:var(--ink-faint);margin-top:calc(var(--s))}
-
 .q{padding:calc(var(--s)*3) 0;border-top:1px solid var(--line-soft)}
 .q-n{font:9px/1.7 var(--mono);letter-spacing:.16em;color:var(--ink-faint)}
 .q-t{font-size:16.5px;line-height:1.5;margin:calc(var(--s)*.75) 0 calc(var(--s)*1.75)}
@@ -66,16 +57,11 @@ button.go:disabled{opacity:.45;cursor:default}
 <main>
   <div class=eyebrow>math 120e &middot; fall 2026</div>
   <h1>Where we&rsquo;re starting from</h1>
-  <p class=lede>Eight questions, about five minutes. This is not graded and it does
-  not count for anything. It tells me what to spend time on in the first two weeks,
-  so answer as you actually would &mdash; a guess you would really make is more
-  useful to me than a blank.</p>
-
-  <div class=who>
-    <label for=sid>your code (from the card)</label>
-    <input id=sid maxlength=12 autocomplete=off spellcheck=false placeholder="M00">
-    <p>Optional. Leave it blank to stay anonymous &mdash; your answers are still counted.</p>
-  </div>
+  <p class=lede>Eight questions, about five minutes. Nothing here is graded and
+  nothing is attached to your name &mdash; there is no sign-in and no field that
+  asks who you are. It tells me what to spend time on in the first two weeks, so
+  answer as you actually would: a guess you would really make is more useful to me
+  than a blank.</p>
 
   <form id=quiz></form>
 
@@ -86,7 +72,9 @@ button.go:disabled{opacity:.45;cursor:default}
   </div>
 </main>
 
-<script>
+<script type=module>
+import { Q } from './questions.js';
+
 // ── where responses go ───────────────────────────────────────────────
 // Leave ENDPOINT empty and the page works with no backend at all: answers stay
 // in the browser and the student downloads a small file. Set it to a Worker URL
@@ -98,56 +86,8 @@ const CLASS_CODE = 'MATH120E-F26';
 // Written for this diagnostic. Each targets one objective of section 1.1, and
 // each wrong answer is a documented error rather than a random decoy, so the
 // result reads as a profile of what to teach rather than as a score.
-const Q = [
-  { obj: '1.1/O3', tag: 'order of operations · sticky sign',
-    t: 'What is <code>&minus;9<sup>2</sup></code>?',
-    o: ['81', '&minus;81', '&minus;18', 'undefined'],
-    key: 1,
-    diag: { 0: 'sticky-sign: reads the minus as part of the base' } },
+// questions live in questions.js, shared with the projector view
 
-  { obj: '1.1/O3', tag: 'order of operations · precedence',
-    t: 'What is <code>10 &minus; 2 &times; 4</code>?',
-    o: ['32', '2', '&minus;2', '18'],
-    key: 1,
-    diag: { 0: 'left-to-right: subtracts before multiplying' } },
-
-  { obj: '1.1/O3', tag: 'order of operations · grouping bar',
-    t: 'What is <code>(6 + 4) &divide; 2</code>?',
-    o: ['5', '8', '7', '3'],
-    key: 0,
-    diag: { 1: 'divides only the last term instead of the whole group' } },
-
-  { obj: '1.1/O2', tag: 'evaluate · substituting a negative',
-    t: 'If <code>x = &minus;3</code>, what is <code>x<sup>2</sup> &minus; 2x</code>?',
-    o: ['3', '15', '&minus;3', '&minus;15'],
-    key: 1,
-    diag: { 0: 'squares the value but drops the sign on the second term',
-            2: 'treats x² as negative' } },
-
-  { obj: '1.1/O1', tag: 'name the property',
-    t: 'Which property does <code>3 + (5 + 2) = (3 + 5) + 2</code> show?',
-    o: ['commutative', 'associative', 'distributive', 'identity'],
-    key: 1,
-    diag: { 0: 'confuses regrouping with reordering' } },
-
-  { obj: '1.1/O1', tag: 'name the property',
-    t: 'Which property does <code>4(x + 7) = 4x + 28</code> show?',
-    o: ['associative', 'commutative', 'distributive', 'inverse'],
-    key: 2, diag: {} },
-
-  { obj: '1.1/O4', tag: 'compare reals',
-    t: 'Which is larger, <code>3/8</code> or <code>0.4</code>?',
-    o: ['3/8', '0.4', 'they are equal', 'cannot tell'],
-    key: 1,
-    diag: { 0: 'compares the numerator to the decimal digits' } },
-
-  { obj: '1.1/O5', tag: 'interval notation',
-    t: 'Which interval means <code>x &gt; 2</code>?',
-    o: ['[2, &infin;)', '(2, &infin;)', '(&minus;&infin;, 2)', '(2, &infin;]'],
-    key: 1,
-    diag: { 0: 'includes an endpoint the strict inequality excludes',
-            3: 'closes a bracket on infinity' } },
-];
 
 // ── local store ──────────────────────────────────────────────────────
 // Every submission is written here first, whether or not it is also sent, so a
@@ -216,7 +156,6 @@ document.getElementById('send').onclick = async () => {
   const payload = {
     code: CLASS_CODE,
     session,
-    student: document.getElementById('sid').value.trim().slice(0, 12),
     at: new Date().toISOString(),
     ms: Date.now() - t0,
     answers: Q.map((q, i) => ({

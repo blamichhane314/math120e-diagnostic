@@ -20,7 +20,7 @@
 const CLASS_CODE = 'MATH120E-F26';   // change per term
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
 };
 
@@ -38,7 +38,27 @@ export default {
       const list = await env.RESPONSES.list({ limit: 1000 });
       const rows = [];
       for (const k of list.keys) rows.push(JSON.parse(await env.RESPONSES.get(k.name)));
+
+      // JSON Lines, for keeping a copy on disk before purging
+      if (url.searchParams.get('format') === 'jsonl') {
+        return new Response(rows.map((r) => JSON.stringify(r)).join('\n'), {
+          headers: { ...CORS, 'Content-Type': 'application/x-ndjson',
+                     'Content-Disposition': 'attachment; filename="responses.jsonl"' },
+        });
+      }
       return json({ ok: true, count: rows.length, rows });
+    }
+
+    // Purge, once you have a copy. Holding a class's responses after you have
+    // read them is a liability with no upside, and KV storage is finite.
+    if (request.method === 'DELETE') {
+      const url = new URL(request.url);
+      if (!env.ADMIN_KEY || url.searchParams.get('key') !== env.ADMIN_KEY) {
+        return json({ ok: false, error: 'not authorised' }, 403);
+      }
+      const list = await env.RESPONSES.list({ limit: 1000 });
+      for (const k of list.keys) await env.RESPONSES.delete(k.name);
+      return json({ ok: true, deleted: list.keys.length });
     }
 
     if (request.method !== 'POST') return json({ ok: false, error: 'POST only' }, 405);
@@ -56,7 +76,6 @@ export default {
     const rec = {
       at: new Date().toISOString(),
       session: String(body.session).slice(0, 40),
-      student: String(body.student || '').slice(0, 40),
       answers: body.answers.slice(0, 60),
       ms: Number(body.ms) || null,
       ua: (request.headers.get('user-agent') || '').slice(0, 120),
