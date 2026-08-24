@@ -6,9 +6,17 @@
 //
 // The endpoint URL is visible in the page source, as any browser-called URL
 // must be. That is not a leak to fix; it is how the web works. What matters is
-// what the endpoint ACCEPTS: a class code, a size cap, and a shape check are
-// enough to keep a classroom dataset clean.
+// what the endpoint ACCEPTS on the way in, and who it will read back OUT to —
+// which are two different questions with two different answers.
 
+// Writing and reading need DIFFERENT protection, and collapsing them into one
+// secret was a mistake: the class code lives in a public repo, so anything it
+// guards is effectively public.
+//
+//   CLASS_CODE — sent by the page, therefore public by construction. It exists
+//     only to keep the dataset free of drive-by noise, and nothing more.
+//   ADMIN_KEY  — a Worker SECRET (Settings -> Variables -> Add -> Encrypt).
+//     Never in the repo, never in the page. This is what guards the readout.
 const CLASS_CODE = 'MATH120E-F26';   // change per term
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -23,9 +31,10 @@ export default {
     if (request.method === 'GET') {
       // a quick way to read what has come in, guarded by the same code
       const url = new URL(request.url);
-      if (url.searchParams.get('code') !== CLASS_CODE) {
-        return json({ ok: false, error: 'bad code' }, 403);
-      }
+      const supplied = url.searchParams.get('key') || '';
+      const expected = env.ADMIN_KEY || '';
+      if (!expected) return json({ ok: false, error: 'ADMIN_KEY is not set on this Worker' }, 500);
+      if (supplied !== expected) return json({ ok: false, error: 'not authorised' }, 403);
       const list = await env.RESPONSES.list({ limit: 1000 });
       const rows = [];
       for (const k of list.keys) rows.push(JSON.parse(await env.RESPONSES.get(k.name)));

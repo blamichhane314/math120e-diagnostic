@@ -16,19 +16,33 @@ if you would rather collect files than run a service.
    `worker.js` from this repo, and deploy it.
 2. In the Worker's **Settings → Variables → KV Namespace Bindings**, add a
    binding named `RESPONSES` pointing at a new KV namespace.
-3. Copy the Worker URL (it ends in `.workers.dev`).
-4. In `index.html`, set `ENDPOINT` near the top of the script to that URL.
-5. Commit and push. GitHub Pages redeploys in about a minute.
+3. Under **Settings → Variables**, add a secret named `ADMIN_KEY` (use *Encrypt*).
+   Make it something long. This guards reading the responses back, and unlike
+   the class code it never appears in this repo or in the page.
+4. Copy the Worker URL (it ends in `.workers.dev`).
+5. In `index.html`, set `ENDPOINT` near the top of the script to that URL.
+6. Commit and push. GitHub Pages redeploys in about a minute.
 
 Change `CLASS_CODE` in both files each term.
 
 ## Reading the responses
 
-Open the Worker URL with the class code appended:
+Open the Worker URL with your admin key:
 
-    https://YOUR-WORKER.workers.dev/?code=MATH120E-F26
+    https://YOUR-WORKER.workers.dev/?key=YOUR-ADMIN-KEY
 
 That returns every response as JSON.
+
+The class code and the admin key do different jobs. The class code is sent by
+the page and is therefore public; it only keeps stray writes out. The admin key
+is a Worker secret and is the only thing standing between a passer-by and the
+whole dataset — so it must never end up in this repo.
+
+**Do not put Cloudflare Access in front of the Worker.** Access adds a login
+wall, and the page posts from a student's browser with no account, so every
+submission would be redirected to a sign-in screen and fail. If you want a login
+on the readout specifically, apply Access to a separate admin path rather than
+to the route the page writes to.
 
 ## On identity
 
