@@ -1,8 +1,11 @@
 # MATH 120E — first-day diagnostic
 
-A single static page. Eight questions, about five minutes, no login. It reports
-what students arrive knowing about the section 1.1 objectives. Each wrong answer
-corresponds to a specific error.
+A single static page. Twenty-four questions, about fifteen minutes, no login.
+It covers the span of Exam 1 — sections 1.1 through 1.7 and 2.4 — and reports
+what students arrive already knowing. Every wrong option corresponds to a
+specific, named error; `check.mjs` refuses a question set where one does not.
+
+    node check.mjs
 
 ## Running it with no backend
 
@@ -56,14 +59,17 @@ here.
 Open `live.html` on the projector with your Worker URL and admin key in the
 query string:
 
-    live.html?endpoint=https://YOUR-WORKER.workers.dev&key=YOUR-ADMIN-KEY
+    live.html?key=YOUR-ADMIN-KEY
+
+The Worker URL is a constant in `live.html`; only the key comes from the query
+string.
 
 It polls every five seconds and draws, per question, how the class answered.
 The correct option is in ink, options that correspond to a known error are in
 the accent colour, and a line names the error when enough of the room picks it.
 
-Both values stay in that tab's address bar. Nothing in the students' page ever
-sees the admin key.
+The key stays in that tab's address bar. Nothing in the students' page ever
+sees it.
 
 Each student writes once and the projector only reads. Forty writes is about
 four percent of the daily free-tier write allowance; a period of polling is a
@@ -81,13 +87,38 @@ the code.
 
 ## What the questions are for
 
-Each targets one objective of section 1.1. Each wrong answer corresponds to a
-documented error:
+Two kinds of item, both defined in `questions.js`.
 
-- **sticky sign**: reading `-9²` as `(-9)²`
-- **left-to-right**: evaluating in reading order instead of by precedence
-- **grouping bars**: treating a fraction bar as if it did not group
-- **naming a property**: confusing associative with commutative
-- **interval notation**: bracket versus parenthesis at an endpoint
+**One answer** (`kind: 'mc'`). `key` is the correct index and `diag` names, for
+every other index, the error that produces it. An option with no nameable error
+does not belong in the list: a response that says only "wrong" is the least
+useful thing a wrong answer can say. The errors used are the ones documented in
+the mathematics-education literature for this material:
+
+- **sticky sign**: reading `-9²` as `(-9)²`, and dropping the minus from a
+  leading coefficient
+- **left to right**: evaluating in reading order instead of by precedence
+- **the bar does not group**: cancelling into one term of a numerator
+- **sign lost across a subtracted bracket**: the minus reaching the first term
+  only
+- **no cross terms**: `(x+3)(x-5)` becoming `x² - 15`
+- **product checked, sum not**: factoring `x²+7x+12` as `(x+2)(x+6)`
+- **factored but not completely**: `6x(2x² - 3x)`, which is correct and still
+  wrong for the question asked
+- **negative exponent read as negative answer**: `2⁻³` giving `-8`
+- **the inequality not reversed** when dividing by a negative
+- **an endpoint included that is excluded**, or the reverse
+
+**Several answers** (`kind: 'multi'`). These show a problem and ask which ideas
+it draws on, without asking for the answer. `keys` lists the options that
+belong, `diag[i]` says why bringing in option `i` is a mistake, and `miss[i]`
+says what is lost by leaving it out. Those are different failures: naming the
+quadratic formula for a factoring problem is not the same mistake as not seeing
+that factoring is the distributive property run backwards, and the second is
+the more interesting one. The projector view reports them on separate lines.
+
+A submitted answer records `picked`, and for a multi-select also `extra` and
+`missed` as index lists, so both failures survive into the data rather than
+collapsing into a single right-or-wrong.
 
 The questions are written for this diagnostic. They are not the homework.

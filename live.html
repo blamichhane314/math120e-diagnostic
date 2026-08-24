@@ -35,19 +35,28 @@ h1{font-size:26px;font-weight:500;letter-spacing:-.018em}
 sup{font-size:.72em;vertical-align:super;line-height:0}
 .bar{display:flex;align-items:center;gap:calc(var(--s));margin-bottom:5px}
 .bar .k{font:10px var(--mono);color:var(--ink-faint);min-width:12px}
-.bar .track{flex:1;height:20px;background:var(--paper-lift);border-radius:2px;
+.bar .track{flex:0 0 32%;height:20px;background:var(--paper-lift);border-radius:2px;
   position:relative;overflow:hidden}
 .bar .fill{position:absolute;inset:0 auto 0 0;background:var(--ink-faint);
   transition:width .4s var(--ease)}
 .bar.right .fill{background:var(--ink-soft)}
 .bar.err .fill{background:var(--accent)}
 .bar .v{font:11px var(--mono);color:var(--ink-soft);min-width:2.4rem;text-align:right}
-.bar .lab{font-size:13px;color:var(--ink-soft);min-width:7rem}
+.bar .lab{flex:1 1 auto;font-size:13px;color:var(--ink-soft);min-width:7rem}
 .bar.right .lab{color:var(--ink)}
 .note{margin-top:6px;font-size:12px;color:var(--accent);line-height:1.45}
 .setup{max-width:40rem;font-size:15px;color:var(--ink-soft)}
 .setup code{font:13px var(--mono);background:var(--paper-lift);padding:2px 6px;
   border-radius:2px;word-break:break-all}
+.card.many{grid-column:span 2}
+@media (max-width:900px){.card.many{grid-column:span 1}}
+.bar.want .fill{background:var(--ink-soft)}
+.bar.want .lab{color:var(--ink)}
+.bar.want .k::after{content:"\2022";color:var(--accent);margin-left:3px}
+.miss{margin-top:6px;font-size:12px;color:var(--ink-soft);line-height:1.45}
+.miss b{color:var(--accent);font-weight:500}
+.sec{grid-column:1/-1;font:9px/1.6 var(--mono);letter-spacing:.2em;
+  color:var(--ink-faint);margin-top:calc(var(--s)*2)}
 </style>
 
 <main>
@@ -100,31 +109,68 @@ function render(rows) {
   countEl.innerHTML = rows.length + '<span>responses</span>';
   const grid = document.getElementById('grid');
   grid.innerHTML = Q.map((q, i) => {
-    const picks = rows.map((r) => (r.answers || [])[i]).filter(Boolean);
-    const n = picks.length || 1;
-    const tally = q.o.map((_, j) => picks.filter((p) => p.picked === j).length);
-    const worst = tally
-      .map((c, j) => ({ c, j }))
-      .filter((x) => q.diag[x.j] && x.c > 0)
-      .sort((a, b) => b.c - a.c)[0];
-    return '<div class=card>' +
-      '<div class=tag>' + q.tag + '</div>' +
-      '<div class=qt>' + q.t + '</div>' +
-      q.o.map((o, j) => {
-        const pct = Math.round((tally[j] / n) * 100);
-        const cls = j === q.key ? 'right' : (q.diag[j] ? 'err' : '');
-        return '<div class="bar ' + cls + '">' +
-          '<span class=k>' + 'ABCD'[j] + '</span>' +
-          '<span class=lab>' + o + '</span>' +
-          '<span class=track><span class=fill style="width:' + pct + '%"></span></span>' +
-          '<span class=v>' + tally[j] + '</span></div>';
-      }).join('') +
-      (worst && worst.c >= Math.max(2, picks.length * 0.15)
-        ? '<div class=note>' + worst.c + ' chose ' + 'ABCD'[worst.j] + ' &mdash; ' +
-          q.diag[worst.j] + '</div>'
-        : '') +
-      '</div>';
+    const picks = rows.map((r) => (r.answers || []).find((a) => a && a.tag === q.tag))
+                      .filter((a) => a && a.answered !== false);
+    const head = (q.part ? '<div class=sec>' + q.part + '</div>' : '');
+    return head + (q.kind === 'multi' ? many(q, picks) : one(q, picks));
   }).join('');
+}
+
+const LETTER = 'ABCDEFG';
+const bar = (k, lab, count, n, cls) =>
+  '<div class="bar ' + cls + '">' +
+    '<span class=k>' + k + '</span>' +
+    '<span class=lab>' + lab + '</span>' +
+    '<span class=track><span class=fill style="width:' +
+      Math.round((count / (n || 1)) * 100) + '%"></span></span>' +
+    '<span class=v>' + count + '</span></div>';
+
+const shell = (q, inner, cls) =>
+  '<div class="card ' + (cls || '') + '">' +
+    '<div class=tag>' + q.tag + '</div>' +
+    '<div class=qt>' + q.t + '</div>' + inner + '</div>';
+
+/* one answer: the tally, and the error behind the commonest wrong pick */
+function one(q, picks) {
+  const n = picks.length;
+  const tally = q.o.map((_, j) => picks.filter((p) => p.picked === j).length);
+  const worst = tally.map((c, j) => ({ c, j }))
+    .filter((v) => q.diag[v.j] && v.c > 0)
+    .sort((a, b) => b.c - a.c)[0];
+  return shell(q,
+    q.o.map((o, j) =>
+      bar(LETTER[j], o, tally[j], n, j === q.key ? 'right' : (q.diag[j] ? 'err' : ''))
+    ).join('') +
+    (worst && worst.c >= Math.max(2, n * 0.15)
+      ? '<div class=note>' + worst.c + ' chose ' + LETTER[worst.j] + ' &mdash; ' +
+        q.diag[worst.j] + '</div>' : ''));
+}
+
+/* several answers: how often each idea was named, marked by whether it
+   belongs. The two failures are read off different rows — an idea brought in
+   that the problem does not use is a row that should be short and is tall; one
+   the problem needs and nobody named is a row that should be tall and is not.
+   The second is the more interesting result and is called out below. */
+function many(q, picks) {
+  const n = picks.length;
+  const tally = q.o.map((_, j) => picks.filter((p) => (p.picked || []).includes(j)).length);
+  const exact = picks.filter((p) => p.correct).length;
+  const gaps = q.keys.map((j) => ({ j, missed: n - tally[j] }))
+    .filter((g) => g.missed >= Math.max(2, n * 0.3))
+    .sort((a, b) => b.missed - a.missed);
+  const brought = q.o.map((_, j) => ({ j, c: tally[j] }))
+    .filter((v) => q.diag[v.j] && v.c >= Math.max(2, n * 0.15))
+    .sort((a, b) => b.c - a.c)[0];
+  return shell(q,
+    q.o.map((o, j) =>
+      bar(LETTER[j], o, tally[j], n, q.keys.includes(j) ? 'want' : 'err')
+    ).join('') +
+    '<div class=miss>' + exact + ' of ' + n + ' named exactly the right set.' +
+    gaps.map((g) => '<br><b>' + g.missed + ' did not name ' + LETTER[g.j] +
+      '</b> &mdash; ' + q.miss[g.j]).join('') +
+    (brought ? '<br>' + brought.c + ' brought in ' + LETTER[brought.j] + ' &mdash; ' +
+      q.diag[brought.j] : '') +
+    '</div>', 'many');
 }
 </script>
 </html>

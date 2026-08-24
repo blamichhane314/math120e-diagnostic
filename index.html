@@ -52,15 +52,32 @@ button.go:disabled{opacity:.45;cursor:default}
   border-left:1px solid var(--accent-soft);font-size:14px;color:var(--ink-soft)}
 .done b{color:var(--ink);font-weight:500}
 .done a{color:var(--accent)}
+
+.part{margin:calc(var(--s)*5) 0 calc(var(--s)*1.5);padding-top:calc(var(--s)*2);
+  border-top:1px solid var(--line)}
+.part:first-of-type{margin-top:calc(var(--s)*3)}
+.part h2{font-size:15px;font-weight:500;letter-spacing:-.005em}
+.part .pn{font:9px/1.6 var(--mono);letter-spacing:.2em;color:var(--ink-faint)}
+.part p{margin-top:calc(var(--s));font-size:14px;color:var(--ink-soft);
+  padding-left:calc(var(--s)*1.5);border-left:1px solid var(--accent-soft)}
+.q .many{font:9px/1.7 var(--mono);letter-spacing:.16em;color:var(--accent);
+  margin-bottom:calc(var(--s))}
+/* A checkbox is square and a radio is round, which is the only cue that says
+   more than one answer is allowed. Do not restyle them into each other. */
+.opt input[type=checkbox]{border-radius:0}
+.opt.multi:has(input:checked){border-color:var(--accent-soft)}
 </style>
 
 <main>
   <div class=eyebrow>math 120e &middot; fall 2026</div>
   <h1>Where we&rsquo;re starting from</h1>
-  <p class=lede>Eight questions, about five minutes. Nothing here is graded.
-  There is no sign-in and no field that asks who you are. It tells me what to
-  spend time on in the first two weeks, so answer as you actually would. A guess
-  is more useful to me than a blank.</p>
+  <p class=lede>Twenty-four questions, about fifteen minutes. It covers the ground
+  of the first exam &mdash; arithmetic, polynomials, factoring, equations &mdash;
+  most of which you have met before. Nothing here is graded. There is no sign-in
+  and no field that asks who you are. It tells me what to spend time on in the
+  first weeks, so answer as you actually would. A guess is more useful to me than
+  a blank, and leaving one blank is better than either if you have genuinely
+  never seen it.</p>
 
   <form id=quiz></form>
 
@@ -118,17 +135,34 @@ if (location.hash === '#recover') {
 const session = 's' + Math.random().toString(36).slice(2, 10);
 const t0 = Date.now();
 const form = document.getElementById('quiz');
+
+// One entry per question: an index for a single-answer question, a sorted
+// array of indices for a multi-answer one, null for untouched.
 const picked = new Array(Q.length).fill(null);
+const LETTER = 'ABCDEFG';
+const answered = () => picked.filter(
+  (p) => p !== null && !(Array.isArray(p) && p.length === 0)).length;
 
 Q.forEach((q, i) => {
+  if (q.part) {
+    const h = document.createElement('div');
+    h.className = 'part';
+    h.innerHTML = '<div class=pn>part ' + LETTER[form.querySelectorAll('.part').length] +
+      '</div><h2>' + q.part + '</h2>' + (q.note ? '<p>' + q.note + '</p>' : '');
+    form.appendChild(h);
+  }
+  const many = q.kind === 'multi';
   const d = document.createElement('div');
   d.className = 'q';
   d.innerHTML =
     '<div class=q-n>' + String(i + 1).padStart(2, '0') + '</div>' +
     '<div class=q-t>' + q.t + '</div>' +
+    (many ? '<div class=many>choose all that apply</div>' : '') +
     q.o.map((o, j) =>
-      '<label class=opt><input type=radio name=q' + i + ' value=' + j + '>' +
-      '<span class=k>' + 'ABCD'[j] + '</span><span class=v>' + o + '</span></label>'
+      '<label class="opt' + (many ? ' multi' : '') + '">' +
+      '<input type=' + (many ? 'checkbox' : 'radio') +
+      ' name=q' + i + ' value=' + j + '>' +
+      '<span class=k>' + LETTER[j] + '</span><span class=v>' + o + '</span></label>'
     ).join('');
   form.appendChild(d);
 });
@@ -136,11 +170,36 @@ Q.forEach((q, i) => {
 form.addEventListener('change', (e) => {
   const m = /^q(\d+)$/.exec(e.target.name || '');
   if (!m) return;
-  picked[+m[1]] = +e.target.value;
-  const n = picked.filter((x) => x !== null).length;
+  const i = +m[1];
+  if (Q[i].kind === 'multi') {
+    picked[i] = [...form.querySelectorAll('input[name=q' + i + ']:checked')]
+      .map((n) => +n.value).sort((a, b) => a - b);
+  } else {
+    picked[i] = +e.target.value;
+  }
+  const n = answered();
   document.getElementById('count').textContent = n + ' of ' + Q.length + ' answered';
   document.getElementById('send').disabled = n === 0;
 });
+
+// What a single question contributes to the payload. A multi-answer question
+// reports two kinds of mistake separately: an idea brought in that the problem
+// does not use, and one the problem uses that was left out. They are not the
+// same error and lumping them into "wrong" throws away the distinction.
+const same = (a, b) => a.length === b.length && a.every((v, k) => v === b[k]);
+function record(q, p) {
+  const base = { obj: q.obj, tag: q.tag, kind: q.kind || 'mc' };
+  if (q.kind === 'multi') {
+    const got = p || [];
+    return { ...base, picked: got, answered: got.length > 0,
+             correct: same(got, q.keys),
+             extra: got.filter((j) => !q.keys.includes(j)),
+             missed: q.keys.filter((j) => !got.includes(j)) };
+  }
+  return { ...base, picked: p, answered: p !== null,
+           correct: p === q.key,
+           error: (p !== null && q.diag[p]) || null };
+}
 
 // ── submit ───────────────────────────────────────────────────────────
 document.getElementById('send').onclick = async () => {
@@ -152,16 +211,12 @@ document.getElementById('send').onclick = async () => {
     session,
     at: new Date().toISOString(),
     ms: Date.now() - t0,
-    answers: Q.map((q, i) => ({
-      obj: q.obj, tag: q.tag,
-      picked: picked[i],
-      correct: picked[i] === q.key,
-      // the name of the error, where the chosen answer has one
-      error: (picked[i] !== null && q.diag[picked[i]]) || null,
-    })),
+    answers: Q.map((q, i) => record(q, picked[i])),
   };
 
-  const right = payload.answers.filter((a) => a.correct).length;
+  const tried = payload.answers.filter((a) => a.answered);
+  const right = tried.filter((a) => a.correct).length;
+  const total = tried.length;
   const done = document.getElementById('done');
 
   // persist before anything else
