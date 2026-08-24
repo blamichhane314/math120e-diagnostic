@@ -16,8 +16,8 @@ the student downloads a small JSON file at the end.
 
 Two halves, hosted separately:
 
-- **GitHub Pages** serves `index.html`, `live.html` and `questions.js` from the
-  repository root.
+- **GitHub Pages** serves `index.html` and `questions.js` from the repository
+  root.
 - **A Cloudflare Worker** takes the data. It lives in `worker/` with a wrangler
   config; see `worker/README.md`. It serves no static files, deliberately — a
   Worker with assets attached hands GET requests to the asset handler before the
@@ -63,36 +63,31 @@ The diagnostic is not graded, so there is nothing here to attach to a student.
 If a future activity does need attribution, put it in WebCampus rather than
 here.
 
-## Watching it live
+## Getting the responses out
 
-Open `live.html` on the projector with your Worker URL and admin key in the
-query string:
+There is no live view and nothing polls. Responses sit in Cloudflare KV until
+you fetch them, in one request, when the activity is over:
 
-    live.html?key=YOUR-ADMIN-KEY
+    W=https://YOUR-WORKER.workers.dev
+    curl --get "$W" --data-urlencode "key=YOUR-ADMIN-KEY" -d format=jsonl -o responses.jsonl
 
-The Worker URL is a constant in `live.html`; only the key comes from the query
-string.
+Then read them offline:
 
-It polls every five seconds and draws, per question, how the class answered.
-The correct option is in ink, options that correspond to a known error are in
-the accent colour, and a line names the error when enough of the room picks it.
+    node report.mjs responses.jsonl
 
-The key stays in that tab's address bar. Nothing in the students' page ever
-sees it.
+It prints, per question, how the class answered and names the error behind every
+wrong pick; for the multi-select items it separates ideas brought in wrongly
+from ideas that belong and went unnamed. It ends with the questions the class
+did worst on and the same rolled up per section, which is the form you would
+actually reteach from.
 
-Each student writes once and the projector only reads. Forty writes is about
-four percent of the daily free-tier write allowance; a period of polling is a
-fraction of the daily read allowance.
+Answers carry their own tag, so a file that mixes question sets still lines up.
 
-## Afterwards
+Once you have the file and have checked it opens, purge:
 
-Keep a copy, then purge:
+    curl -X DELETE --get "$W" --data-urlencode "key=YOUR-ADMIN-KEY"
 
-    curl "https://YOUR-WORKER.workers.dev/?key=KEY&format=jsonl" -o responses.jsonl
-    curl -X DELETE "https://YOUR-WORKER.workers.dev/?key=KEY"
-
-Responses live in Cloudflare KV, not in this repository. Git only ever holds
-the code.
+Responses live in KV, not in this repository. Git only ever holds the code.
 
 ## What the questions are for
 
@@ -124,7 +119,7 @@ belong, `diag[i]` says why bringing in option `i` is a mistake, and `miss[i]`
 says what is lost by leaving it out. Those are different failures: naming the
 quadratic formula for a factoring problem is not the same mistake as not seeing
 that factoring is the distributive property run backwards, and the second is
-the more interesting one. The projector view reports them on separate lines.
+the more interesting one. `report.mjs` reports them on separate lines.
 
 A submitted answer records `picked`, and for a multi-select also `extra` and
 `missed` as index lists, so both failures survive into the data rather than

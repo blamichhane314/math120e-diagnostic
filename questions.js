@@ -1,5 +1,5 @@
-// questions.js — the single definition, shared by the student page and the
-// projector view.
+// questions.js — the single definition. The student page renders from it and
+// report.mjs reads it to name what a response means.
 //
 // Coverage is the span of Exam 1: sections 1.1 through 1.7 and 2.4. A second
 // diagnostic after that exam can reuse this file with a different question set.
