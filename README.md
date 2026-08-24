@@ -18,11 +18,19 @@ Two halves, hosted separately:
 
 - **GitHub Pages** serves `index.html`, `live.html` and `questions.js` from the
   repository root.
-- **A Cloudflare Worker** takes the data. Paste `worker.js` into it and deploy.
+- **A Cloudflare Worker** takes the data. It lives in `worker/` with a wrangler
+  config; see `worker/README.md`. It serves no static files, deliberately — a
+  Worker with assets attached hands GET requests to the asset handler before the
+  script runs, so reads come back as a web page and writes are refused with an
+  empty 405, which looks exactly like a binding that will not attach.
+
+  **Check the endpoint answers as JSON before class.** A deploy that reports
+  success is not evidence that the script is serving; the three curl commands in
+  `worker/README.md` are.
 
 Because the page is on `github.io` and the endpoint on `workers.dev`, the
 browser treats every submission as cross-origin and sends a preflight first.
-`worker.js` answers it. That is what the CORS block is for.
+The Worker answers it; that is what the CORS block is for.
 
 The Worker needs two things, both on the Worker itself:
 
@@ -32,7 +40,8 @@ The Worker needs two things, both on the Worker itself:
 Both attach only on the next deploy, so deploy again after adding them. If
 either is missing the endpoint returns a 500 naming the one that is absent.
 
-Change `CLASS_CODE` in both `index.html` and `worker.js` each term. It is sent
+Change `CLASS_CODE` in both `index.html` and `worker/src/index.js` each term. It
+is sent
 by the page, so it is public. It keeps stray writes out.
 
 ## Restricting who can open it
