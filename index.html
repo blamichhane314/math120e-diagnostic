@@ -71,13 +71,6 @@ button.go:disabled{opacity:.45;cursor:default}
 <main>
   <div class=eyebrow>math 120e &middot; fall 2026</div>
   <h1>Where we&rsquo;re starting from</h1>
-  <p class=lede>Twenty-four questions, about fifteen minutes. It covers the ground
-  of the first exam &mdash; arithmetic, polynomials, factoring, equations &mdash;
-  most of which you have met before. Nothing here is graded. There is no sign-in
-  and no field that asks who you are. It tells me what to spend time on in the
-  first weeks, so answer as you actually would. A guess is more useful to me than
-  a blank, and leaving one blank is better than either if you have genuinely
-  never seen it.</p>
 
   <form id=quiz></form>
 
@@ -225,7 +218,7 @@ document.getElementById('send').onclick = async () => {
   if (!ENDPOINT) {
     const blob = new Blob([JSON.stringify(payload, null, 1)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    done.innerHTML = '<b>Done. ' + right + ' of ' + Q.length + ' correct.</b> ' +
+    done.innerHTML = '<b>Done. ' + right + ' of ' + total + ' correct.</b> ' +
       'Your answers are saved on this device. ' +
       '<a id=dl href="' + url + '" download="diagnostic-' + session + '.json">Download the file</a> ' +
       'and hand it in.';
@@ -243,7 +236,7 @@ document.getElementById('send').onclick = async () => {
     const j = await r.json();
     if (!j.ok) throw new Error(j.error || 'refused');
     done.innerHTML = '<b>Recorded. Thank you.</b> ' + right + ' of ' +
-      Q.length + ' correct. That is not a grade and is not kept against your ' +
+      total + ' correct. That is not a grade and is not kept against your ' +
       'name.';
     btn.textContent = 'sent';
   } catch (err) {
