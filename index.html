@@ -57,11 +57,10 @@ button.go:disabled{opacity:.45;cursor:default}
 <main>
   <div class=eyebrow>math 120e &middot; fall 2026</div>
   <h1>Where we&rsquo;re starting from</h1>
-  <p class=lede>Eight questions, about five minutes. Nothing here is graded and
-  nothing is attached to your name &mdash; there is no sign-in and no field that
-  asks who you are. It tells me what to spend time on in the first two weeks, so
-  answer as you actually would: a guess you would really make is more useful to me
-  than a blank.</p>
+  <p class=lede>Eight questions, about five minutes. Nothing here is graded.
+  There is no sign-in and no field that asks who you are. It tells me what to
+  spend time on in the first two weeks, so answer as you actually would. A guess
+  is more useful to me than a blank.</p>
 
   <form id=quiz></form>
 
@@ -76,22 +75,17 @@ button.go:disabled{opacity:.45;cursor:default}
 import { Q } from './questions.js';
 
 // ── where responses go ───────────────────────────────────────────────
-// Same origin as the page, so no CORS and nothing to keep in sync. Set it to
-// '' to run with no backend at all: answers stay in the browser and the student
-// downloads a small file. See README.md.
+// Set ENDPOINT to '' to run with no backend: answers stay in the browser and
+// the student downloads a small file. See README.md.
 const ENDPOINT = 'https://lingering-mouse-baa0.bishallamichhane512.workers.dev';
 const CLASS_CODE = 'MATH120E-F26';
 
 // ── the questions ────────────────────────────────────────────────────
-// Written for this diagnostic. Each targets one objective of section 1.1, and
-// each wrong answer is a documented error rather than a random decoy, so the
-// result reads as a profile of what to teach rather than as a score.
 // questions live in questions.js, shared with the projector view
 
 
 // ── local store ──────────────────────────────────────────────────────
-// Every submission is written here first, whether or not it is also sent, so a
-// dropped network or an unclicked link never costs a student their work.
+// Every submission is written here first, whether or not it is also sent.
 const KEY = 'm120.diag.';
 function keep(payload) {
   try { localStorage.setItem(KEY + payload.session, JSON.stringify(payload)); } catch {}
@@ -170,15 +164,13 @@ document.getElementById('send').onclick = async () => {
   const right = payload.answers.filter((a) => a.correct).length;
   const done = document.getElementById('done');
 
-  // Persist BEFORE anything else. A submission that survives only as a link the
-  // student has to click is a submission that gets lost, and it gets lost
-  // silently, which is worse than failing loudly.
+  // persist before anything else
   keep(payload);
 
   if (!ENDPOINT) {
     const blob = new Blob([JSON.stringify(payload, null, 1)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    done.innerHTML = '<b>Done &mdash; ' + right + ' of ' + Q.length + '.</b> ' +
+    done.innerHTML = '<b>Done. ' + right + ' of ' + Q.length + ' correct.</b> ' +
       'Your answers are saved on this device. ' +
       '<a id=dl href="' + url + '" download="diagnostic-' + session + '.json">Download the file</a> ' +
       'and hand it in.';
@@ -195,13 +187,13 @@ document.getElementById('send').onclick = async () => {
     });
     const j = await r.json();
     if (!j.ok) throw new Error(j.error || 'refused');
-    done.innerHTML = '<b>Thank you &mdash; that is recorded.</b> ' + right + ' of ' +
-      Q.length + ' correct, which is not a grade and is not kept against your name. ' +
-      'See you in class.';
+    done.innerHTML = '<b>Recorded. Thank you.</b> ' + right + ' of ' +
+      Q.length + ' correct. That is not a grade and is not kept against your ' +
+      'name.';
     btn.textContent = 'sent';
   } catch (err) {
-    done.innerHTML = '<b>That did not send.</b> Your answers were saved on this device ' +
-      'instead &mdash; please tell me, and leave this tab open. (' + err.message + ')';
+    done.innerHTML = '<b>That did not send.</b> Your answers were saved on this ' +
+      'device instead. Please tell me, and leave this tab open. (' + err.message + ')';
     btn.textContent = 'retry';
     btn.disabled = false;
   }

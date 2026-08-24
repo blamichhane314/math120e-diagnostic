@@ -62,9 +62,7 @@ sup{font-size:.72em;vertical-align:super;line-height:0}
 <script type=module>
 import { Q } from './questions.js';
 
-// Read-only projector view. It polls the Worker, which is cheap: reads are the
-// abundant resource on the free tier and writes are the scarce one, so polling
-// costs effectively nothing while every student still writes exactly once.
+// Read-only projector view. Polls the Worker every 5 seconds.
 const url = new URL(location.href);
 const ENDPOINT = 'https://lingering-mouse-baa0.bishallamichhane512.workers.dev';
 const KEY = url.searchParams.get('key') || '';
@@ -78,8 +76,8 @@ if (!KEY) {
   body.innerHTML =
     '<div class=setup><p>Open this page with your admin key:</p>' +
     '<p><code>live.html?key=YOUR-ADMIN-KEY</code></p>' +
-    '<p style="margin-top:1em">The key stays in this tab&rsquo;s address bar and is never sent ' +
-    'to the students&rsquo; page. Keep this window on the projector; it refreshes itself.</p></div>';
+    '<p style="margin-top:1em">The key stays in this tab&rsquo;s address bar. It is never ' +
+    'sent to the students&rsquo; page. This page refreshes itself every five seconds.</p></div>';
 } else {
   body.innerHTML = '<div class=grid id=grid></div>';
   tick();

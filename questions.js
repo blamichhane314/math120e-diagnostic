@@ -1,11 +1,8 @@
 // questions.js — the single definition, shared by the student page and the
-// projector view. Two copies would silently drift, and a live histogram
-// labelled with the wrong question is worse than no histogram.
+// projector view.
 //
 // Each question targets one objective of section 1.1. Each wrong answer maps to
-// a documented error rather than being a random decoy, so what comes back is a
-// profile of what to teach rather than a score. These are written for this
-// diagnostic; they are not the homework.
+// a documented error. Written for this diagnostic; not the homework.
 
 export const Q = [
   { obj: '1.1/O3', tag: 'order of operations · sticky sign',

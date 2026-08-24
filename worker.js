@@ -3,16 +3,14 @@
 //
 // The page is on github.io and this is on workers.dev, so the browser treats
 // every submission as cross-origin: it sends an OPTIONS preflight first and
-// will discard the response unless the headers below come back. That is the
-// cost of hosting the two halves separately, and it is why the CORS block
-// exists at all.
+// will discard the response unless the headers below come back. That is what
+// the CORS block is for.
 //
-// Two guards doing two different jobs:
-//   CLASS_CODE — sent by the page, therefore public by construction. It keeps
-//     drive-by writes out of the dataset and claims nothing more.
-//   ADMIN_KEY  — an encrypted variable set on the project, never in this repo
-//     and never in the page. It is the only thing between a passer-by and the
-//     whole dataset.
+// Two guards:
+//   CLASS_CODE  sent by the page, so it is public. It keeps drive-by writes
+//               out of the dataset.
+//   ADMIN_KEY   an encrypted variable set on the project, never in this repo
+//               and never in the page. It gates reads and deletes.
 
 const CLASS_CODE = 'MATH120E-F26';   // change per term; must match index.html
 
@@ -53,8 +51,7 @@ async function submit(request, env) {
     return json({ ok: false, error: 'expected session and answers[]' }, 400);
   }
 
-  // No name, no code, no address. A response is a random session id and the
-  // answers, and that is the whole record by design.
+  // A response is a random session id and the answers. No name, no address.
   const rec = {
     at: new Date().toISOString(),
     session: String(body.session).slice(0, 40),
