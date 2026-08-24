@@ -1,18 +1,21 @@
-// functions/api/responses.js — the endpoint, deployed with the site.
+// src/index.js — the whole server.
 //
-// A Pages Function runs on the same origin as the page that calls it, so there
-// is no CORS here at all: no preflight, no allow-headers, no second thing to
-// keep in sync when the class code changes. One push updates the page and the
-// endpoint together, which removes the failure mode where they disagree.
+// Static files come from public/ and are matched first by the assets layer.
+// Only paths that are not files reach this code, so /api/responses lands here
+// while /index.html never does.
 //
-// Two guards, doing two different jobs:
+// Same origin as the page, so there is no CORS anywhere: no preflight, no
+// allow-headers, and no second deployment that could drift out of step with
+// the page that calls it.
+//
+// Two guards doing two different jobs:
 //   CLASS_CODE — sent by the page, therefore public by construction. It keeps
 //     drive-by writes out of the dataset and claims nothing more.
-//   ADMIN_KEY  — an environment variable set in the Pages project, never in
-//     this repository and never in the page. It is the only thing standing
-//     between a passer-by and the whole dataset.
+//   ADMIN_KEY  — an encrypted variable set on the project, never in this repo
+//     and never in the page. It is the only thing between a passer-by and the
+//     whole dataset.
 
-const CLASS_CODE = 'MATH120E-F26';   // change per term; must match index.html
+const CLASS_CODE = 'MATH120E-F26';   // change per term; must match public/index.html
 
 const json = (o, status = 200) =>
   new Response(JSON.stringify(o), {
@@ -20,8 +23,20 @@ const json = (o, status = 200) =>
     headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
   });
 
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+    if (url.pathname !== '/api/responses') return env.ASSETS.fetch(request);
+
+    if (request.method === 'POST')   return submit(request, env);
+    if (request.method === 'GET')    return read(url, env);
+    if (request.method === 'DELETE') return purge(url, env);
+    return json({ ok: false, error: 'method not allowed' }, 405);
+  },
+};
+
 /* ── a student submits ─────────────────────────────────────────── */
-export async function onRequestPost({ request, env }) {
+async function submit(request, env) {
   if (!env.RESPONSES) return json({ ok: false, error: 'RESPONSES KV is not bound' }, 500);
 
   let body;
@@ -47,11 +62,9 @@ export async function onRequestPost({ request, env }) {
 }
 
 /* ── you read them back ────────────────────────────────────────── */
-export async function onRequestGet({ request, env }) {
+async function read(url, env) {
   if (!env.RESPONSES) return json({ ok: false, error: 'RESPONSES KV is not bound' }, 500);
   if (!env.ADMIN_KEY) return json({ ok: false, error: 'ADMIN_KEY is not set' }, 500);
-
-  const url = new URL(request.url);
   if (url.searchParams.get('key') !== env.ADMIN_KEY) {
     return json({ ok: false, error: 'not authorised' }, 403);
   }
@@ -72,9 +85,9 @@ export async function onRequestGet({ request, env }) {
 }
 
 /* ── you purge, once you have a copy ───────────────────────────── */
-export async function onRequestDelete({ request, env }) {
+async function purge(url, env) {
+  if (!env.RESPONSES) return json({ ok: false, error: 'RESPONSES KV is not bound' }, 500);
   if (!env.ADMIN_KEY) return json({ ok: false, error: 'ADMIN_KEY is not set' }, 500);
-  const url = new URL(request.url);
   if (url.searchParams.get('key') !== env.ADMIN_KEY) {
     return json({ ok: false, error: 'not authorised' }, 403);
   }

@@ -1,0 +1,15 @@
+{
+  // This project deploys as a Worker with static assets, not as a classic
+  // Pages project — which is why the `functions/` convention did nothing and
+  // its source was served as a downloadable file instead of executing.
+  //
+  // Assets are matched first. Anything that is not a file in public/ falls
+  // through to the Worker, which is how /api/responses reaches code.
+  "name": "math120e-diagnostic",
+  "main": "src/index.js",
+  "compatibility_date": "2026-01-01",
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS"
+  }
+}

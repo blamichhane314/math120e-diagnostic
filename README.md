@@ -10,26 +10,31 @@ It works immediately. Responses are held in the browser and the student can
 download a small JSON file at the end. Good for testing the flow, and adequate
 if you would rather collect files than run a service.
 
-## Deploying
+## How it deploys
 
-The repository is private and Cloudflare Pages builds it. The API lives in
-`functions/`, so it deploys with the site on the same origin — one push updates
-both, and there is no CORS anywhere.
+The repository is private and Cloudflare builds it as a **Worker with static
+assets** — not as a classic Pages project. That distinction matters: the
+`functions/` directory convention belongs to Pages, and on this platform it did
+nothing at all except serve its own source as a downloadable file.
 
-1. In the Cloudflare dashboard: **Workers & Pages → Create → Pages → Connect to
-   Git**, and pick this repository. There is no build command and no output
-   directory: it is static files.
-2. In the project's **Settings → Bindings**, add a **KV namespace** bound as
-   `RESPONSES`.
-3. In **Settings → Variables and secrets**, add `ADMIN_KEY` as a **secret**.
-   Any long string. This guards reading the responses and never appears in this
-   repository or in the page.
-4. Redeploy. Bindings only take effect on the next build, which is the usual
-   reason a first attempt returns a 500.
+    public/     the pages, served by the assets layer
+    src/        the Worker, reached only by paths that are not files
+    wrangler.jsonc
 
-Change `CLASS_CODE` in both `index.html` and `functions/api/responses.js` each
-term. It is sent by the page and is therefore public; it exists to keep stray
-writes out, nothing more.
+Assets are matched first, so `/api/responses` falls through to `src/index.js`
+while `/index.html` never does. The page and the endpoint share an origin, so
+there is no CORS and one push updates both.
+
+Two bindings on the project, both required:
+
+- **KV namespace**, variable name `RESPONSES`
+- **ADMIN_KEY**, an encrypted variable, any long string
+
+Bindings only attach on the next build, so redeploy after adding them. If either
+is missing the endpoint returns a 500 naming the one that is absent rather than
+failing silently.
+
+Change `CLASS_CODE` in both `public/index.html` and `src/index.js` each term.
 
 ## Restricting who can open it
 
