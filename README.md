@@ -14,6 +14,19 @@ the student downloads a small JSON file at the end.
 
 ## How it deploys
 
+**Do not connect this repository to the Worker as a build source.** The repo
+root is a static site — `index.html`, `questions.js` — with no worker
+entrypoint. A build from it deploys those files as static assets straight over
+the API script, and Cloudflare's asset handler then owns the URL: it serves GET
+from files and refuses every other method. Reads come back as a web page and
+writes as an empty 405, which reads as a binding that will not attach and sends
+you hunting for a problem that is not there.
+
+That is what happened before: a build hook added while the repo was meant to be
+served as a site outlived the decision, and every subsequent push silently
+redeployed over the endpoint. The Worker is deployed from `worker/` with
+`wrangler deploy`, by hand, and that is the only way it should be deployed.
+
 Two halves, hosted separately:
 
 - **GitHub Pages** serves `index.html` and `questions.js` from the repository
