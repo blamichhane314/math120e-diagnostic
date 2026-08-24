@@ -10,39 +10,36 @@ It works immediately. Responses are held in the browser and the student can
 download a small JSON file at the end. Good for testing the flow, and adequate
 if you would rather collect files than run a service.
 
-## Collecting responses
+## Deploying
 
-1. Go to `workers.cloudflare.com`, create a Worker, replace its code with
-   `worker.js` from this repo, and deploy it.
-2. In the Worker's **Settings → Variables → KV Namespace Bindings**, add a
-   binding named `RESPONSES` pointing at a new KV namespace.
-3. Under **Settings → Variables**, add a secret named `ADMIN_KEY` (use *Encrypt*).
-   Make it something long. This guards reading the responses back, and unlike
-   the class code it never appears in this repo or in the page.
-4. Copy the Worker URL (it ends in `.workers.dev`).
-5. In `index.html`, set `ENDPOINT` near the top of the script to that URL.
-6. Commit and push. GitHub Pages redeploys in about a minute.
+The repository is private and Cloudflare Pages builds it. The API lives in
+`functions/`, so it deploys with the site on the same origin — one push updates
+both, and there is no CORS anywhere.
 
-Change `CLASS_CODE` in both files each term.
+1. In the Cloudflare dashboard: **Workers & Pages → Create → Pages → Connect to
+   Git**, and pick this repository. There is no build command and no output
+   directory: it is static files.
+2. In the project's **Settings → Bindings**, add a **KV namespace** bound as
+   `RESPONSES`.
+3. In **Settings → Variables and secrets**, add `ADMIN_KEY` as a **secret**.
+   Any long string. This guards reading the responses and never appears in this
+   repository or in the page.
+4. Redeploy. Bindings only take effect on the next build, which is the usual
+   reason a first attempt returns a 500.
 
-## Reading the responses
+Change `CLASS_CODE` in both `index.html` and `functions/api/responses.js` each
+term. It is sent by the page and is therefore public; it exists to keep stray
+writes out, nothing more.
 
-Open the Worker URL with your admin key:
+## Restricting who can open it
 
-    https://YOUR-WORKER.workers.dev/?key=YOUR-ADMIN-KEY
+Cloudflare Access, on the free Zero Trust plan, gates the site by email for a
+small number of users — roughly the size of one class. Add a policy over the
+Pages project and only addresses on your list get in.
 
-That returns every response as JSON.
-
-The class code and the admin key do different jobs. The class code is sent by
-the page and is therefore public; it only keeps stray writes out. The admin key
-is a Worker secret and is the only thing standing between a passer-by and the
-whole dataset — so it must never end up in this repo.
-
-**Do not put Cloudflare Access in front of the Worker.** Access adds a login
-wall, and the page posts from a student's browser with no account, so every
-submission would be redirected to a sign-in screen and fail. If you want a login
-on the readout specifically, apply Access to a separate admin path rather than
-to the route the page writes to.
+Apply it to the **site**, never to `/api/responses`. A student's browser posts
+there with no session, so a login wall on that path would redirect every
+submission to a sign-in screen and fail.
 
 ## On identity
 

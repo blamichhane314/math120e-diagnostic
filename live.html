@@ -66,7 +66,7 @@ import { Q } from './questions.js';
 // abundant resource on the free tier and writes are the scarce one, so polling
 // costs effectively nothing while every student still writes exactly once.
 const url = new URL(location.href);
-const ENDPOINT = url.searchParams.get('endpoint') || '';
+const ENDPOINT = '/api/responses';
 const KEY = url.searchParams.get('key') || '';
 const EVERY = 5000;
 
@@ -74,12 +74,12 @@ const body = document.getElementById('body');
 const countEl = document.getElementById('count');
 const stateEl = document.getElementById('state');
 
-if (!ENDPOINT || !KEY) {
+if (!KEY) {
   body.innerHTML =
-    '<div class=setup><p>Open this page with your Worker URL and admin key:</p>' +
-    '<p><code>live.html?endpoint=https://YOUR-WORKER.workers.dev&amp;key=YOUR-ADMIN-KEY</code></p>' +
-    '<p style="margin-top:1em">Both stay in this tab&rsquo;s address bar and are never sent to ' +
-    'the students&rsquo; page. Keep this window on the projector; it refreshes itself.</p></div>';
+    '<div class=setup><p>Open this page with your admin key:</p>' +
+    '<p><code>live.html?key=YOUR-ADMIN-KEY</code></p>' +
+    '<p style="margin-top:1em">The key stays in this tab&rsquo;s address bar and is never sent ' +
+    'to the students&rsquo; page. Keep this window on the projector; it refreshes itself.</p></div>';
 } else {
   body.innerHTML = '<div class=grid id=grid></div>';
   tick();

@@ -76,10 +76,10 @@ button.go:disabled{opacity:.45;cursor:default}
 import { Q } from './questions.js';
 
 // ── where responses go ───────────────────────────────────────────────
-// Leave ENDPOINT empty and the page works with no backend at all: answers stay
-// in the browser and the student downloads a small file. Set it to a Worker URL
-// to collect centrally. See README.md.
-const ENDPOINT = 'https://lingering-mouse-baa0.bishallamichhane512.workers.dev';
+// Same origin as the page, so no CORS and nothing to keep in sync. Set it to
+// '' to run with no backend at all: answers stay in the browser and the student
+// downloads a small file. See README.md.
+const ENDPOINT = '/api/responses';
 const CLASS_CODE = 'MATH120E-F26';
 
 // ── the questions ────────────────────────────────────────────────────
