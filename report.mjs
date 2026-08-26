@@ -8,14 +8,79 @@
 import { readFileSync } from 'node:fs';
 import { Q } from './questions.js';
 
-const file = process.argv[2];
-if (!file) { console.error('usage: node report.mjs responses.jsonl'); process.exit(1); }
+const args = process.argv.slice(2);
+const file = args.find((a) => !a.startsWith('--'));
+const flag = (name) => {
+  const i = args.indexOf('--' + name);
+  return i >= 0 ? args[i + 1] : null;
+};
+const listOnly = args.includes('--list');
 
-const rows = readFileSync(file, 'utf8').split('\n').filter(Boolean).map((l, i) => {
+if (!file) {
+  console.error('usage: node report.mjs responses.jsonl [--since <when>] [--until <when>] [--list]');
+  console.error('');
+  console.error('  --since / --until  keep only responses in a window, so your own test');
+  console.error('                     entries can be left out of the class figures.');
+  console.error('                     Local time. "2026-08-26" or "2026-08-26 10:30".');
+  console.error('  --list             show the responses and their times, and stop.');
+  process.exit(1);
+}
+
+// Local time in, local time out. The records are stamped UTC, and a class that
+// meets at 11am is not going to be reasoned about in UTC.
+const when = (s) => {
+  if (!s) return null;
+  const d = new Date(s.includes('T') || s.includes(' ') ? s.replace(' ', 'T') : s + 'T00:00:00');
+  if (isNaN(d)) { console.error(`cannot read the time "${s}"`); process.exit(1); }
+  return d;
+};
+const since = when(flag('since'));
+const until = when(flag('until'));
+
+let rows = readFileSync(file, 'utf8').split('\n').filter(Boolean).map((l, i) => {
   try { return JSON.parse(l); } catch { console.error(`line ${i + 1} is not JSON; skipped`); return null; }
 }).filter(Boolean);
 
 if (!rows.length) { console.error('no responses in that file'); process.exit(1); }
+
+const all = rows.slice();
+if (since || until) {
+  rows = rows.filter((r) => {
+    const t = new Date(r.at);
+    return (!since || t >= since) && (!until || t <= until);
+  });
+  if (!rows.length) { console.error('no responses in that window'); process.exit(1); }
+}
+
+/* ── what came in, and when ────────────────────────────────────────
+   Responses arrive in a cluster while the class is sitting there. Anything
+   well outside that cluster is almost certainly a test entry, so the times
+   are what separate the two. */
+const fmt = (d) => d.toLocaleString(undefined,
+  { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
+function sessions(list) {
+  const sorted = list.slice().sort((a, b) => (a.at || '').localeCompare(b.at || ''));
+  console.log(rule(`${sorted.length} responses`));
+  console.log(`  ${'when (local)'.padEnd(16)}${'session'.padEnd(12)}${'answered'.padStart(9)}${'correct'.padStart(9)}${'open for'.padStart(10)}`);
+  let prev = null;
+  for (const r of sorted) {
+    const t = new Date(r.at);
+    // a break of more than 30 minutes almost certainly separates two sittings
+    if (prev && (t - prev) > 30 * 60 * 1000) console.log('  ' + '·'.repeat(54));
+    prev = t;
+    const a = r.answers || [];
+    const tried = a.filter((x) => x.answered !== false);
+    const right = tried.filter((x) => x.correct).length;
+    const mins = r.ms ? Math.round(r.ms / 60000) : null;
+    console.log(`  ${fmt(t).padEnd(16)}${String(r.session).padEnd(12)}` +
+      `${(tried.length + '/' + a.length).padStart(9)}` +
+      `${(tried.length ? pct(right, tried.length) + '%' : '-').padStart(9)}` +
+      `${(mins === null ? '-' : mins + ' min').padStart(10)}`);
+  }
+  if (list.length !== all.length) {
+    console.log(`\n  ${all.length - list.length} of ${all.length} responses fall outside the window and are excluded.`);
+  }
+}
 
 const L = 'ABCDEFG';
 const pct = (a, b) => (b ? Math.round((a / b) * 100) : 0);
@@ -26,6 +91,9 @@ const rule = (s) => `\n${s}\n${'─'.repeat(72)}`;
 // up and anything unrecognised is counted rather than silently dropped.
 const forQ = (q) => rows.map((r) => (r.answers || []).find((a) => a && a.tag === q.tag))
                         .filter((a) => a && a.answered !== false);
+
+sessions(rows);
+if (listOnly) process.exit(0);
 
 console.log(rule(`${rows.length} responses · ${file}`));
 const times = rows.map((r) => r.ms).filter(Boolean).sort((a, b) => a - b);
