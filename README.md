@@ -89,6 +89,36 @@ and no endpoint. Then read the file offline:
 
     node report.mjs responses.jsonl
 
+## Telling your own runs from the class
+
+Arrival times do not separate them reliably: a class may arrive in a cluster or
+straggle, and your own test runs are scattered across days. So the record says
+which it is, set at the time rather than guessed at afterwards.
+
+Open the diagnostic on your own device with `#test` appended:
+
+    https://blamichhane314.github.io/math120e-diagnostic/#test
+
+That device is marked from then on. A line appears at the top of the page
+confirming it, every submission from it carries a flag, and `report.mjs` leaves
+those out of the class figures. `#untest` clears the mark, and
+`--include-tests` shows them.
+
+Two other tools, useful for responses collected before the marking existed:
+
+    node report.mjs responses.jsonl --list
+
+lists arrival times with a divider wherever more than thirty minutes separates
+two submissions, so separate sittings are visible. And
+
+    node report.mjs responses.jsonl --since "2026-08-26 10:55" --until "2026-08-26 11:50"
+
+restricts the figures to a window, in local time, reporting how many were
+excluded so too narrow a window is visible rather than silent.
+
+Simplest of all: purge immediately before class, which leaves nothing to
+separate.
+
 It prints, per question, how the class answered and names the error behind every
 wrong pick; for the multi-select items it separates ideas brought in wrongly
 from ideas that belong and went unnamed. It ends with the questions the class

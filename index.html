@@ -91,6 +91,10 @@ button.go:disabled{opacity:.45;cursor:default}
   border-left:1px solid var(--accent-soft);font-size:14px;color:var(--ink-soft)}
 .done b{color:var(--ink);font-weight:500}
 .done a{color:var(--accent)}
+.testflag{margin-bottom:calc(var(--s)*3);padding:calc(var(--s)*1.25) calc(var(--s)*2);
+  border-left:2px solid var(--accent);background:var(--paper-lift);
+  font-size:13.5px;color:var(--ink-soft)}
+.testflag a{color:var(--accent)}
 
 .part{margin:calc(var(--s)*5) 0 calc(var(--s)*1.5);padding-top:calc(var(--s)*2);
   border-top:1px solid var(--line)}
@@ -173,6 +177,26 @@ if (location.hash === '#recover') {
 }
 
 // ── render ───────────────────────────────────────────────────────────
+// ── whose submission is this ─────────────────────────────────────
+// Timing does not separate an instructor's own runs from a class: they may be
+// scattered across days while a class arrives in one cluster, or not. So the
+// record says which it is, rather than the reader guessing afterwards.
+//
+//   open with #test    to mark this device; every submission from it is
+//                      flagged and left out of the class figures
+//   open with #untest  to clear the mark
+const TESTKEY = 'm120.diag.test';
+if (location.hash === '#test')   { try { localStorage.setItem(TESTKEY, '1'); } catch {} }
+if (location.hash === '#untest') { try { localStorage.removeItem(TESTKEY); } catch {} }
+const isTest = (() => { try { return localStorage.getItem(TESTKEY) === '1'; } catch { return false; } })();
+if (isTest) addEventListener('DOMContentLoaded', () => {
+  const b = document.createElement('div');
+  b.className = 'testflag';
+  b.innerHTML = 'Marked as a test device. Submissions are recorded and excluded ' +
+    'from the class figures. <a href="#untest" onclick="location.reload()">clear</a>';
+  document.querySelector('main').prepend(b);
+});
+
 const session = 's' + Math.random().toString(36).slice(2, 10);
 const t0 = Date.now();
 const form = document.getElementById('quiz');
@@ -250,6 +274,7 @@ document.getElementById('send').onclick = async () => {
   const payload = {
     code: CLASS_CODE,
     session,
+    test: isTest || undefined,
     at: new Date().toISOString(),
     ms: Date.now() - t0,
     answers: Q.map((q, i) => record(q, picked[i])),

@@ -57,6 +57,8 @@ async function submit(request, env) {
     session: String(body.session).slice(0, 40),
     answers: body.answers.slice(0, 60),
     ms: Number(body.ms) || null,
+    // set by the page when the device is marked as the instructor's
+    test: body.test === true || undefined,
   };
   await env.RESPONSES.put(rec.at + '|' + rec.session, JSON.stringify(rec));
   return json({ ok: true });

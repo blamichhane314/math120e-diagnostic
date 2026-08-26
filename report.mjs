@@ -15,6 +15,7 @@ const flag = (name) => {
   return i >= 0 ? args[i + 1] : null;
 };
 const listOnly = args.includes('--list');
+const keepTests = args.includes('--include-tests');
 
 if (!file) {
   console.error('usage: node report.mjs responses.jsonl [--since <when>] [--until <when>] [--list]');
@@ -23,6 +24,9 @@ if (!file) {
   console.error('                     entries can be left out of the class figures.');
   console.error('                     Local time. "2026-08-26" or "2026-08-26 10:30".');
   console.error('  --list             show the responses and their times, and stop.');
+  console.error('  --include-tests    keep submissions marked from your own device.');
+  console.error('                     They are left out by default. Mark a device by');
+  console.error('                     opening the diagnostic with #test appended.');
   process.exit(1);
 }
 
@@ -44,6 +48,18 @@ let rows = readFileSync(file, 'utf8').split('\n').filter(Boolean).map((l, i) => 
 if (!rows.length) { console.error('no responses in that file'); process.exit(1); }
 
 const all = rows.slice();
+
+// A submission from a device marked with #test is the instructor's own. This
+// is recorded at the time rather than inferred later, because arrival times do
+// not reliably separate the two: a class may or may not cluster, and test runs
+// are scattered across days.
+let dropped = 0;
+if (!keepTests) {
+  const before = rows.length;
+  rows = rows.filter((r) => r.test !== true);
+  dropped = before - rows.length;
+}
+
 if (since || until) {
   rows = rows.filter((r) => {
     const t = new Date(r.at);
@@ -61,7 +77,7 @@ const fmt = (d) => d.toLocaleString(undefined,
 function sessions(list) {
   const sorted = list.slice().sort((a, b) => (a.at || '').localeCompare(b.at || ''));
   console.log(rule(`${sorted.length} responses`));
-  console.log(`  ${'when (local)'.padEnd(16)}${'session'.padEnd(12)}${'answered'.padStart(9)}${'correct'.padStart(9)}${'open for'.padStart(10)}`);
+  console.log(`  ${'when (local)'.padEnd(16)}${'session'.padEnd(17)}${'answered'.padStart(9)}${'correct'.padStart(9)}${'open for'.padStart(10)}`);
   let prev = null;
   for (const r of sorted) {
     const t = new Date(r.at);
@@ -72,13 +88,24 @@ function sessions(list) {
     const tried = a.filter((x) => x.answered !== false);
     const right = tried.filter((x) => x.correct).length;
     const mins = r.ms ? Math.round(r.ms / 60000) : null;
-    console.log(`  ${fmt(t).padEnd(16)}${String(r.session).padEnd(12)}` +
+    const mark = r.test === true ? ' test' : '';
+    console.log(`  ${fmt(t).padEnd(16)}${(String(r.session) + mark).padEnd(17)}` +
       `${(tried.length + '/' + a.length).padStart(9)}` +
       `${(tried.length ? pct(right, tried.length) + '%' : '-').padStart(9)}` +
       `${(mins === null ? '-' : mins + ' min').padStart(10)}`);
   }
-  if (list.length !== all.length) {
-    console.log(`\n  ${all.length - list.length} of ${all.length} responses fall outside the window and are excluded.`);
+  const out = all.length - list.length;
+  if (out) {
+    const bits = [];
+    if (dropped) bits.push(`${dropped} marked as a test device`);
+    const byWindow = out - dropped;
+    if (byWindow > 0) bits.push(`${byWindow} outside the window`);
+    console.log(`\n  ${out} of ${all.length} responses excluded: ${bits.join(', ')}.`);
+  }
+  const unmarked = list.filter((r) => r.test !== true).length;
+  if (!dropped && unmarked === list.length && list.length) {
+    console.log(`\n  None are marked as test submissions. Open the diagnostic with`);
+    console.log(`  #test on your own device and they will be flagged from then on.`);
   }
 }
 
